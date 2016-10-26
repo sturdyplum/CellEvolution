@@ -1,153 +1,142 @@
+from math import sin, cos, pi, sqrt
 from NeuralNetwork import NeuralNetwork
+import numpy
+import random
 
 
 class Cell:
 
-    def __init__(self, parent1, parent2, x_pos=-1, y_pos=-1, start_energy=-1, max_energy=-1, is_child=False, is_shell=True):
-        self.x_pos = x_pos
-        self.y_pos = y_pos
-        self.energy = start_energy
-        self.max_energy = max_energy
-        self.rounds = 0
-        if not is_shell:
-            if is_child:
-                self.net = NeuralNetwork(17, 8, 5, parent1, parent2, is_child)#python doesnt let me make multiple constructers so this is a hacky work around should fix this later
-            else:
-                self.net = NeuralNetwork(17, 8, 5, 0, 0, is_child)
-        self.dead = False
+    def __init__(self):
+        self.x_pos = random.uniform(0, 100)
+        self.y_pos = random.uniform(0, 100)
+        self.speed = 1.0
+        self.rot_speed = pi/8.0     # replace this later
+        self.energy = 200
+        self.direction = random.uniform(0, 2*pi)
+        self.nn = NeuralNetwork(5, 10, 10, 3)
+        self.alive = True
+        self.fitness = 0
 
-    def eat_food(self, food_energy):
-        self.energy = min(self.max_energy, self.energy+food_energy)
+    def get_inputs(self, food, predators):
+        rotated_x1 = .5 * cos(self.direction) - 2 * sin(self.direction)
+        rotated_x2 = -.5 * cos(self.direction) - 2 * sin(self.direction)
+        rotated_y1 = 2 * cos(self.direction) + .5 * sin(self.direction)
+        rotated_y2 = 2 * cos(self.direction) - .5 * sin(self.direction)
 
-    def move(self, world_x, world_y, preds, foods):
-        inp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]#generates the input for the neural network
-        # index 0 = predator right, 1 = predaor above, 2 = predator left, 3 = predator down (0 if no 1 if yes)
-        # index 4 = food right, 5 = food above, 6 = food left, 7 = food down (0 if no 1 if yes)
-        # index 8-11 distances from predators right, up, left, down (distance/max distance to normalize)
-        # index 11-15 distances from food right, up, left, down (distance/max distance to normalize)
-        # index 16 current energy/ max energy
+        rotated_x1 += self.x_pos
+        rotated_x2 += self.x_pos
+        rotated_y1 += self.y_pos
+        rotated_y2 += self.y_pos
 
-        dist_up = 1000000
-        dist_down = 1000000
-        dist_left = 1000000
-        dist_right = 1000000
-        inp[16] = self.energy/200 ##change this along with max en
+        antenna = [[rotated_x1, rotated_y1], [rotated_x2, rotated_y2]]
 
-        for p in preds:#finds predators **make this more efficent later**
-            if p.x_pos == self.x_pos:
-                if p.x_pos > self.x_pos:
-                    dist_right = min(dist_right, abs(p.x_pos-self.x_pos))
-                    inp[0] = 1
-                else:
-                    dist_left = min(dist_left, abs(p.x_pos-self.x_pos))
-                    inp[2] = 1
-            if p.y_pos == self.y_pos:
-                if p.y_pos > self.y_pos:
-                    dist_up = min(dist_up, abs(p.y_pos - self.y_pos))
-                    inp[1] = 1
-                else:
-                    dist_down = min(dist_down, abs(p.y_pos - self.y_pos))
-                    inp[3] = 1
+        min_food1 = 10000000
+        min_pred1 = 10000000
 
-        for p in foods:#finds food **make this more efficent later**
-            if p.x_pos == self.x_pos:
-                if p.x_pos > self.x_pos:
-                    if inp[0] == 1:
-                        continue
-                    dist_right = min(dist_right, abs(p.x_pos - self.x_pos))
-                    inp[4] = 1
-                else:
-                    if inp[1] == 1:
-                        continue
-                    dist_left = min(dist_left, abs(p.x_pos - self.x_pos))
-                    inp[5] = 1
-            if p.y_pos == self.y_pos:
-                if p.y_pos > self.y_pos:
-                    if inp[2] == 1:
-                        continue
-                    dist_up = min(dist_up, abs(p.y_pos - self.y_pos))
-                    inp[6] = 1
-                else:
-                    if inp[3] == 1:
-                        continue
-                    dist_down = min(dist_down, abs(p.y_pos - self.y_pos))
-                    inp[7] = 1
+        for a in food:
+            tmp = sqrt((antenna[0][0] - a.x_pos) * (antenna[0][0] - a.x_pos) + (antenna[0][1] - a.y_pos) * (antenna[0][1] - a.y_pos))
+            if tmp < min_food1:
+                min_food1 = tmp
 
-        if dist_up != 1000000:
-            if inp[1] == 1:
-                inp[9] = dist_up/world_y
-            else:
-                inp[13] = dist_up/world_y
+        for a in predators:
+            tmp = sqrt((antenna[0][0] - a.x_pos) * (antenna[0][0] - a.x_pos) + (antenna[0][1] - a.y_pos) * (antenna[0][1] - a.y_pos))
+            if tmp < min_pred1:
+                min_pred1 = tmp
 
-        if dist_right != 1000000:
-            if inp[0] == 1:
-                inp[8] = dist_up / world_y
-            else:
-                inp[12] = dist_up / world_y
+        min_food2 = 10000000
+        min_pred2 = 10000000
 
-        if dist_left != 1000000:
-            if inp[2] == 1:
-                inp[10] = dist_up / world_y
-            else:
-                inp[14] = dist_up / world_y
+        for a in food:
+            tmp = sqrt((antenna[1][0] - a.x_pos) * (antenna[1][0] - a.x_pos) + (antenna[1][1] - a.y_pos) * (
+            antenna[1][1] - a.y_pos))
+            if tmp < min_food2:
+                min_food2 = tmp
 
-        if dist_down != 1000000:
-            if inp[3] == 1:
-                inp[11] = dist_up / world_y
-            else:
-                inp[15] = dist_up / world_y
+        for a in predators:
+            tmp = sqrt((antenna[1][0] - a.x_pos) * (antenna[1][0] - a.x_pos) + (antenna[1][1] - a.y_pos) * (
+            antenna[1][1] - a.y_pos))
+            if tmp < min_pred2:
+                min_pred2 = tmp
 
-        moves = self.net.query(inp)
+        return [1.0/max(.001, min_food1),
+                1.0/max(.001, min_food2),
+                1.0/max(.001, min_pred1),
+                1.0/max(.001, min_pred2),
+                self.energy/200.0]
 
-        if max(moves) == moves[0]:
-            return 0
-        if max(moves) == moves[1]:
-            return 1
-        if max(moves) == moves[2]:
-            return 2
-        if max(moves) == moves[3]:
-            return 3
-        if max(moves) == moves[4]:
-            return 4
+    def move_forward(self, how_much):
+        rotated_x = (-1*how_much) * sin(self.direction)
+        rotated_y = (1 * how_much) * cos(self.direction)
 
-    def make_move(self, world_x, world_y, preds, foods):#gets the move from the neural network and makes it if valid
-        move = self.move(world_x, world_y, preds, foods)#neural network returns 0 = up, 1 = right, 2 = down, 3 = left, 4 = stand still
-        if move == 0 and self.y_pos + 1 < world_y:
-            self.y_pos += 1
-            return
-        if move == 1 and self.x_pos + 1 < world_x:
-            self.x_pos += 1
-            return
-        if move == 2 and self.y_pos > 0:
-            self.y_pos -= 1
-            return
-        if move == 3 and self.x_pos > 0:
-            self.x_pos -= 1
-            return
-        if move == 4:
-            return
-        if self.y_pos + 1 < world_y:
-            self.y_pos += 1
-            return
-        if self.x_pos + 1 < world_x:
-            self.x_pos += 1
-            return
-        if self.y_pos > 0:
-            self.y_pos -= 1
-            return
-        if self.x_pos > 0:
-            self.x_pos -= 1
-            return
+        self.x_pos += rotated_x
+        self.y_pos += rotated_y
 
-    def make_move_and_eat(self, world_x, preds, foods):
-        self.make_move(world_x, world_x, preds, foods)
-        for a in foods:#checks to see if standing on food and eats it if so
-            if self.y_pos == a.y_pos and self.x_pos == a.x_pos:
-                self.eat_food(a.energy)
-                foods.remove(a)
-                return
-        self.rounds += 1
+        self.x_pos += 100
+        self.y_pos += 100
+
+        self.x_pos %= 100
+        self.y_pos %= 100
+
+    def rotate_right(self, how_much):
+        self.direction += pi * how_much
+        self.direction %= 2*pi
+
+    def rotate_left(self, how_much):
+        self.direction -= pi * how_much
+        self.direction += 2*pi
+        self.direction %= 2*pi
+
+    def make_move(self, food, predators):
+        inputs = self.get_inputs(food, predators)
+        moves = self.nn.query(inputs)
+
+        self.move_forward(moves[0])
+        self.rotate_right(moves[1])
+        self.rotate_left(moves[2])
+
+    def move(self, foods, predators):
+        self.make_move(foods, predators)
+        closets_food = 10000000
+
+        for a in foods:
+            tmp = sqrt((self.x_pos - a.x_pos) * (self.x_pos - a.x_pos) + (self.y_pos - a.y_pos) * (
+                        self.y_pos - a.y_pos))
+            if tmp < closets_food:
+                closets_food = tmp
+                closets_food1 = a
+
+        if closets_food <= .7:
+            self.energy += 100
+            self.energy %= 200
+            self.fitness += 1
+            foods.remove(closets_food1)
+
         self.energy -= 1
         if self.energy < 0:
-            self.dead = True
+            self.alive = False
+        return -1
 
+    def mix(self, other):
+        for a in range(self.nn.inodes):
+            for x in range(self.nn.hnodes1):
+                r = random.randint(1, 1000)
+                if r == 1:
+                    self.nn.weights_input_hidden1[x][a] += numpy.random.randn()/10.0
+                elif r > 700:
+                    self.nn.weights_input_hidden1[x][a] = other.nn.weights_input_hidden1[x][a]
+
+        for a in range(self.nn.hnodes1):
+            for x in range(self.nn.hnodes2):
+                r = random.randint(1, 1000)
+                if r == 1:
+                    self.nn.weights_hidden1_hidden2[x][a] += numpy.random.randn() / 10.0
+                elif r > 700:
+                    self.nn.weights_hidden1_hidden2[x][a] = other.nn.weights_hidden1_hidden2[x][a]
+
+        for a in range(self.nn.hnodes2):
+            for x in range(self.nn.onodes):
+                r = random.randint(1, 1000)
+                if r == 1:
+                    self.nn.weights_hidden2_output[x][a] += numpy.random.randn() / 10.0
+                elif r > 700:
+                    self.nn.weights_hidden2_output[x][a] = other.nn.weights_hidden2_output[x][a]
