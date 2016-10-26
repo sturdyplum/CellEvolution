@@ -7,7 +7,7 @@ class Predator:
     def __init__(self):
         self.x_pos = random.uniform(0, 100)
         self.y_pos = random.uniform(0, 100)
-        self.speed = .5
+        self.speed = 1
 
     def move(self, cells):
 
@@ -31,16 +31,9 @@ class Predator:
             target_x = closest_cell.x_pos
             target_y = closest_cell.y_pos
 
-            if abs(target_x - self.x_pos) < self.speed:
-                self.x_pos = target_x
-            elif target_x > self.x_pos:
-                self.x_pos += self.speed
-            else:
-                self.x_pos -= self.speed
+            movement_vector = [target_x-self.x_pos, target_y-self.y_pos]
+            norm_vec = [movement_vector[0]/sqrt(min), movement_vector[1]/sqrt(min)]
+            movement_vector2 = [norm_vec[0] * self.speed, norm_vec[1] * self.speed]
 
-            if abs(target_y - self.y_pos) < self.speed:
-                self.y_pos = target_y
-            elif target_y > self.y_pos:
-                self.y_pos += self.speed
-            else:
-                self.y_pos -= self.speed
+            self.x_pos += movement_vector2[0]
+            self.y_pos += movement_vector2[1]

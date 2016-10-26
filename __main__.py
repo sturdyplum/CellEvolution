@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import random
 import copy
 
-#plt.ion()
-#plt.axis([0, 100, 0, 100])
+plt.ion()
+plt.axis([0, 100, 0, 100])
 
 if __name__ == '__main__':
     number_of_cells = 52
