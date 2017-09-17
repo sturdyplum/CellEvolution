@@ -1,5 +1,6 @@
 import tkinter as tk
 import world
+from Cell import Cell
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -38,6 +39,10 @@ class Application(tk.Frame):
         self.useMemory = tk.Checkbutton(self, text="Use memory", variable=self.useMemoryGet)
         self.useMemory.grid()
         
+        self.controlSpeedGet = tk.IntVar()
+        self.controlSpeed = tk.Checkbutton(self, text="Cells control speed", variable=self.controlSpeedGet)
+        self.controlSpeed.grid()
+        
 
         self.quitButton = tk.Button(self, text='Quit',
                                     command=self.quit)
@@ -50,12 +55,15 @@ class Application(tk.Frame):
         num_cells = int(self.cellNumbersGet.get("1.0", "end-1c"))
         num_food = int(self.foodNumbersGet.get("1.0", "end-1c"))
         num_pred = int(self.predNumbersGet.get("1.0", "end-1c"))
-        use_memory = self.useMemoryGet.get()
+        Cell.useMemory = self.useMemoryGet.get()
+        Cell.controlSpeed = self.controlSpeedGet.get()
+        
         self.cellNumbersGet.destroy()
         self.cellNumbers.destroy()
         self.foodNumbersGet.destroy()
         self.foodNumbers.destroy()
         self.useMemory.destroy()
+        self.controlSpeed.destroy()
         self.predNumbersGet.destroy()
         self.predNumbers.destroy()
         self.startButton.destroy()
@@ -66,6 +74,10 @@ class Application(tk.Frame):
         shouldDraw = tk.IntVar()
         drawCheckbox = tk.Checkbutton(self, text="Draw canvas", variable=shouldDraw)
         drawCheckbox.grid()
+        drawCheckbox.select()
+        shouldGradient = tk.IntVar()
+        gradientCheckbox = tk.Checkbutton(self, text="Draw gradient", variable=shouldGradient)
+        gradientCheckbox.grid()
         
         
         
@@ -77,7 +89,7 @@ class Application(tk.Frame):
         
         tk.Canvas.create_circle = _create_circle
         self.update()
-        world.runWorld(number_of_cells=num_cells,number_of_food=num_food,canvas=canvas, speedSlider=speedSlider, thresholdSlider=thresholdSlider, shouldDraw=shouldDraw, number_of_preds=num_pred, use_memory=use_memory)
+        world.runWorld(number_of_cells=num_cells,number_of_food=num_food,canvas=canvas, speedSlider=speedSlider, thresholdSlider=thresholdSlider, shouldDraw=shouldDraw, number_of_preds=num_pred, shouldGradient=shouldGradient)
 
 
 

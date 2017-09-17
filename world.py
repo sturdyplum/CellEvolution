@@ -39,9 +39,8 @@ def repopulate(cells, number_of_cells, isPred):
             second = randomCell(cells, isPred)
         cells.append(first.mix(second))
 
-def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlider, thresholdSlider, shouldDraw, use_memory):
+def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlider, thresholdSlider, shouldDraw, shouldGradient):
     Cell.useSecondary = number_of_preds > 0
-    Cell.useMemory = use_memory
         
     size_of_world = 900
     cells = [Cell(0) for i in range(number_of_cells)]  # creates the initial cells
@@ -77,18 +76,19 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
             canvas.update()
         if shouldDraw.get() == 1:
             canvas.delete("all")
-            #bestCopy = Cell()
-            #bestCopy.nn = copy.deepcopy(spec.nn)
-            #for x in range(0, 900, 50):
-            #    for y in range(0, 900, 50):
-            #        bestCopy.direction = 0
-            #        bestCopy.x_pos = x
-            #        bestCopy.y_pos = y
-            #        for i in range(1,10):
-            #            tmpX = bestCopy.x_pos
-            #            tmpY = bestCopy.y_pos
-            #            bestCopy.make_move(food)
-            #            canvas.create_line(tmpX,tmpY,bestCopy.x_pos,bestCopy.y_pos)
+            if shouldGradient.get():
+                bestCopy = Cell(0)
+                bestCopy.nn = copy.deepcopy(spec.nn)
+                for x in range(0, 900, 50):
+                    for y in range(0, 900, 50):
+                        bestCopy.direction = 0
+                        bestCopy.x_pos = x
+                        bestCopy.y_pos = y
+                        for i in range(1,10):
+                            tmpX = bestCopy.x_pos
+                            tmpY = bestCopy.y_pos
+                            bestCopy.make_move(food, preds)
+                            canvas.create_line(tmpX,tmpY,bestCopy.x_pos,bestCopy.y_pos)
             for f in food:
                 canvas.create_rectangle(f.x_pos-3, f.y_pos-3, f.x_pos+3, f.y_pos+3, fill = "black")
 
