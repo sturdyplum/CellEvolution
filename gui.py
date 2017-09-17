@@ -42,6 +42,11 @@ class Application(tk.Frame):
         self.foodNumbers.destroy()
         self.startButton.destroy()
         self.quitButton.destroy()
+        speedSlider = tk.Scale(self, from_=-15, to=15, orient=tk.HORIZONTAL, label="Speed") 
+        speedSlider.grid()
+        thresholdSlider = tk.Scale(self, from_=0, to=20, orient=tk.HORIZONTAL, resolution=1, label="Threshold") 
+        thresholdSlider.grid()
+        
         canvas = tk.Canvas(self, width=900, height=900, borderwidth=2, highlightthickness=0, bg="white")
         canvas.grid()
 
@@ -49,7 +54,7 @@ class Application(tk.Frame):
             return self.create_oval(x - r, y - r, x + r, y + r, **kwargs)
 
         tk.Canvas.create_circle = _create_circle
-        world.runWorld(number_of_cells=num_cells,number_of_food=num_food,canvas=canvas)
+        world.runWorld(number_of_cells=num_cells,number_of_food=num_food,canvas=canvas, speedSlider=speedSlider, thresholdSlider=thresholdSlider)
 
 
 

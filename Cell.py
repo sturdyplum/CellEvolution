@@ -14,11 +14,12 @@ class Cell:
         self.rot_speed = pi/8.0     # replace this later
         self.energy = random.randint(150, 200)
         self.direction = random.uniform(0, 2*pi)
-        self.nn = NeuralNetwork(2, 5, 2, 2)
+        self.nn = NeuralNetwork(3, 5, 2, 3)
         self.alive = True
         self.fitness = 0
         self.age = 0
-        self.prev = 1
+        self.prev = 0
+        self.color = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
 
     # Gets the inputs for the neural network based on two antenas and its self.
     def get_inputs(self, food):
@@ -64,7 +65,8 @@ class Cell:
         #         min_pred_distance_self = distance
 
         return [
-            self.prev,#min_food_distance_left_antena - min_food_distance_right_antena,
+            self.prev,
+            min_food_distance_left_antena - min_food_distance_right_antena,
             min_food_distance_self / 10,
                 ]
 
@@ -79,11 +81,11 @@ class Cell:
         #if(self.x_pos == 900 or self.x_pos == 0
          #  or self.y_pos == 900 or self.y_pos == 0):
           #  self.alive = False
-        self.x_pos = min(900, self.x_pos)
-        self.x_pos = max(0, self.x_pos)
+        #self.x_pos = min(900, self.x_pos)
+        #self.x_pos = max(0, self.x_pos)
 
-        self.y_pos = min(900, self.y_pos)
-        self.y_pos = max(0, self.y_pos)
+        #self.y_pos = min(900, self.y_pos)
+        #self.y_pos = max(0, self.y_pos)
     # Rotates the cell clockwise.
     def rotate(self, how_much):
         self.direction +=  how_much
@@ -93,12 +95,12 @@ class Cell:
     def make_move(self, food):
         inputs = self.get_inputs(food)
         moves = self.nn.query(inputs)
-        self.move_forward(2.4)
         self.rotate(moves[0])
-        self.prev = moves[1]
+        self.prev = 0 # moves[1] <-- no memory for now
+        self.move_forward(max(.5,min(4,moves[2])))
 
     # Simulates the life of the cell for a single cycle.
-    def single_cycle(self, foods):
+    def single_cycle(self, foods, deltaTime):
         self.make_move(foods)
         closets_food = 10000000
         self.age += 1
@@ -110,14 +112,14 @@ class Cell:
                 closets_food = tmp
                 closets_food1 = a
 
-        if closets_food <= 1.4:
+        if closets_food <= 1.8:
             self.energy += 200
             self.fitness += 1
             foods.remove(closets_food1)
 
         # Check to see if the cell has enough energy to survive. 
         self.energy -= 1 * int(self.age/400)
-        if self.energy < 0 or self.energy > 1000:
+        if self.energy < 0:
             self.alive = False
         return -1
 
@@ -151,4 +153,15 @@ class Cell:
                 r = random.randint(1, 100)
                 if r == 1:
                     child.nn.weights_hidden2_output[a][x] += numpy.random.normal(0.0,1.0)
+        for k in range(len(child.color)):
+            r = random.randint(1, 100)
+            if r > 50:
+                child.color[k] = other.color[k]
+            r = random.randint(1, 100)
+            if r == 1:
+                child.color[k] += int(numpy.random.normal(0, 25))
+            if child.color[k] < 0:
+                child.color[k] = 0
+            if child.color[k] > 255:
+                child.color[k] = 255
         return child
