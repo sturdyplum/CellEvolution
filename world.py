@@ -104,7 +104,7 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
             canvas.update()
         for z in cells:
             if z.alive:
-                z.single_cycle(food, preds)
+                z.single_cycle(food, preds, j)
         for z in preds:
             if z.alive:
-                z.single_cycle(cells, food)
+                z.single_cycle(cells, food, j)
