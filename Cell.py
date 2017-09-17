@@ -24,10 +24,10 @@ class Cell:
     # Gets the inputs for the neural network based on two antenas and its self.
     def get_inputs(self, food):
         # Determin the location of the two antenas.
-        left_antena_x = 3 * cos(self.direction) - .5 * sin(self.direction)
-        right_antena_x = 3 * cos(self.direction) + .5 * sin(self.direction)
-        left_antena_y = .5 * cos(self.direction) + 3 * sin(self.direction)
-        right_antena_y = -.5 * cos(self.direction) + 3 * sin(self.direction)
+        left_antena_x = -3 * cos(self.direction) - .5 * sin(self.direction)
+        right_antena_x = 3 * cos(self.direction) - .5 * sin(self.direction)
+        left_antena_y = .5 * cos(self.direction) - 3 * sin(self.direction)
+        right_antena_y = .5 * cos(self.direction) + 3 * sin(self.direction)
 
         left_antena_x += self.x_pos
         right_antena_x += self.x_pos
