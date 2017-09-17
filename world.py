@@ -1,8 +1,23 @@
 from Cell import Cell
 from Food import Food
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool 
+import matplotlib.pyplot as plt
 import random
 import time
 import copy
+
+multi = False
+
+class Runner(object):
+    def __init__(self, food,preds, j):
+        self.food=food
+        self.preds=preds
+        self.j=j
+
+    def __call__(self, z):
+        if(z.alive):
+             z.single_cycle(self.food, self.preds, self.j)
 
 def randomCell(cells, isPred):
     totalFitness = 0
@@ -46,6 +61,8 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
     cells = [Cell(0) for i in range(number_of_cells)]  # creates the initial cells
     preds = [Cell(1) for i in range(number_of_preds)]
     food = []
+    best = []
+    avg = []
 
     for k in range(number_of_food - len(food)):  # creates the needed amount of food
         food.append(Food())
@@ -73,6 +90,11 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
 
         if j % 1000 == 0:
             print(str(j) + " " + str(spec.fitness) + " " + str(totalFitness))
+            best.append(spec.fitness)
+            avg.append(totalFitness/number_of_cells)
+            plt.plot(best,'g')
+            plt.plot(avg,'r')
+            plt.savefig('stats.svg')
             canvas.update()
         if shouldDraw.get() == 1:
             canvas.delete("all")
@@ -102,9 +124,15 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
             if replaced:
                 canvas.create_circle(spec.x_pos, spec.y_pos, 2, fill = "red")
             canvas.update()
-        for z in cells:
-            if z.alive:
-                z.single_cycle(food, preds, j)
+        if multi:
+            pool = ThreadPool()
+            pool.map(Runner(food,preds,j),cells)
+            pool.close()
+            pool.join()
+        if not multi:    
+            for z in cells:
+               if z.alive:
+                  z.single_cycle(food, preds, j)
         for z in preds:
             if z.alive:
                 z.single_cycle(cells, food, j)

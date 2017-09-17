@@ -10,7 +10,6 @@ class NeuralNetwork:
         self.hnodes1 = hiddennodes1
         self.hnodes2 = hiddennodes2
         self.onodes = outputnodes
-        self.activation_function = lambda x: scipy.special.expit(x)
         self.weights_input_hidden1 = numpy.random.normal(0.0, 1, (self.inodes, self.hnodes1))
         self.weights_hidden1_hidden2 = numpy.random.normal(0.0, 1, (self.hnodes1, self.hnodes2))
         self.weights_hidden2_output = numpy.random.normal(0.0, 1, (self.hnodes2, self.onodes))
@@ -20,11 +19,11 @@ class NeuralNetwork:
 
         hidden_inputs1 = numpy.dot(numpy.transpose(inputs),self.weights_input_hidden1)
 
-        hidden_outputs1 = self.activation_function(hidden_inputs1)
+        hidden_outputs1 = scipy.special.expit(hidden_inputs1)
 
         hidden_inputs2 = numpy.dot(hidden_outputs1 ,self.weights_hidden1_hidden2)
 
-        hidden_outputs2 = self.activation_function(hidden_inputs2)
+        hidden_outputs2 = scipy.special.expit(hidden_inputs2)
 
         final_inputs = numpy.dot(hidden_outputs2, self.weights_hidden2_output)
 
