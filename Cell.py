@@ -7,27 +7,36 @@ import copy
 
 class Cell:
 
-    def __init__(self):
+    def __init__(self, isPred):
         self.x_pos = random.uniform(0, 900)
         self.y_pos = random.uniform(0, 900)
         self.speed = 1.0
         self.rot_speed = pi/8.0     # replace this later
         self.energy = random.randint(150, 200)
         self.direction = random.uniform(0, 2*pi)
-        self.nn = NeuralNetwork(3, 5, 2, 3)
+        inputCount = 2
+        outputCount = 2
+        if Cell.useSecondary:
+            inputCount += 2
+        if Cell.useMemory:
+            inputCount += 1
+            outputCount += 1
+        self.nn = NeuralNetwork(inputCount, 6, 3, outputCount)
         self.alive = True
         self.fitness = 0
         self.age = 0
-        self.prev = 0
+        self.memory = 0
+        self.speed = 0
+        self.isPred = isPred
         self.color = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
 
     # Gets the inputs for the neural network based on two antenas and its self.
-    def get_inputs(self, food):
+    def get_inputs(self, food, predators):
         # Determin the location of the two antenas.
-        left_antena_x = 3 * cos(self.direction) - .5 * sin(self.direction)
-        right_antena_x = 3 * cos(self.direction) + .5 * sin(self.direction)
-        left_antena_y = .5 * cos(self.direction) + 3 * sin(self.direction)
-        right_antena_y = -.5 * cos(self.direction) + 3 * sin(self.direction)
+        left_antena_x = 15 * cos(self.direction-.3)
+        right_antena_x = 15 * cos(self.direction+.3)
+        left_antena_y = 15 * sin(self.direction-.3)
+        right_antena_y = 15 * sin(self.direction+.3)
 
         left_antena_x += self.x_pos
         right_antena_x += self.x_pos
@@ -38,42 +47,41 @@ class Cell:
 
         # Determin the closest food and predator for each of the antena and itself.
         min_food_distance_left_antena = 10000000
-
+        min_food_distance_right_antena = 10000000
+        min_food_distance_self = 10000000
+        min_pred_distance_left_antena = 10000000
+        min_pred_distance_right_antena = 10000000
+        min_pred_distance_self = 10000000
+        
+        inputs = []
         for a in food:
             distance =(antenna[0][0] - a.x_pos)**2 + (antenna[0][1] - a.y_pos)**2
-            if distance < min_food_distance_left_antena:
-                min_food_distance_left_antena = distance
-
-        min_food_distance_right_antena = 10000000
-
-        for a in food:
-            distance = (antenna[1][0] - a.x_pos)**2 + (antenna[0][1] - a.y_pos)**2
-            if distance < min_food_distance_right_antena:
-                min_food_distance_right_antena = distance
-
-        min_food_distance_self = 10000000
-        min_pred_distance_self = 10000000
-
-        for a in food:
+            min_food_distance_left_antena = min(min_food_distance_left_antena, distance)
+            distance = (antenna[1][0] - a.x_pos)**2 + (antenna[1][1] - a.y_pos)**2
+            min_food_distance_right_antena = min(min_food_distance_right_antena, distance)
             distance = (self.x_pos - a.x_pos)**2 + (self.y_pos - a.y_pos)**2
-            if distance < min_food_distance_self:
-                min_food_distance_self = distance
-
-        # for a in predators:
-        #     distance = sqrt((self.x_pos - a.x_pos)**2 + (self.y_pos - a.y_pos)**2)
-        #     if distance < min_pred_distance_self:
-        #         min_pred_distance_self = distance
-
-        return [
-            self.prev,
-            min_food_distance_left_antena - min_food_distance_right_antena,
-            min_food_distance_self / 10,
-                ]
+            min_food_distance_self = min(min_food_distance_self, distance)
+        inputs.extend([min_food_distance_self, min_food_distance_left_antena - min_food_distance_right_antena])
+        if Cell.useSecondary:
+            for a in predators:
+                distance =(antenna[0][0] - a.x_pos)**2 + (antenna[0][1] - a.y_pos)**2
+                if distance < min_pred_distance_left_antena:
+                    min_pred_distance_left_antena = distance
+                distance = (antenna[1][0] - a.x_pos)**2 + (antenna[1][1] - a.y_pos)**2
+                if distance < min_pred_distance_right_antena:
+                    min_pred_distance_right_antena = distance
+                distance = (self.x_pos - a.x_pos)**2 + (self.y_pos - a.y_pos)**2
+                if distance < min_pred_distance_self:
+                    min_pred_distance_self = distance
+            inputs.extend([min_pred_distance_self, min_pred_distance_left_antena - min_pred_distance_right_antena])
+        if Cell.useMemory:
+            inputs.extend([self.memory])
+        return inputs
 
     # Moves the cell foward in the direction it is currently facing.
-    def move_forward(self, how_much):
-        rotated_x = (how_much) * cos(self.direction)
-        rotated_y = (how_much) * sin(self.direction)
+    def move_forward(self):
+        rotated_x = self.speed * cos(self.direction)
+        rotated_y = self.speed * sin(self.direction)
 
         self.x_pos += rotated_x
         self.y_pos += rotated_y
@@ -90,20 +98,27 @@ class Cell:
     def rotate(self, how_much):
         self.direction +=  how_much
         self.direction %= 2*pi
-
+    def logistic(self, L, k, x0, x):
+        return L/(1+numpy.exp(-k*(x-x0)))
     # Makes the cells move for a frame.
-    def make_move(self, food):
-        inputs = self.get_inputs(food)
+    def make_move(self, foods, preds):
+        inputs = self.get_inputs(foods, preds)
         moves = self.nn.query(inputs)
         self.rotate(moves[0])
-        self.prev = 0 # moves[1] <-- no memory for now
-        self.move_forward(max(.5,min(4,moves[2])))
+        if self.isPred:
+            self.speed = 2
+        else:
+            self.speed = self.logistic(3, .3, 0, moves[1])+.5
+        self.move_forward()
+        if Cell.useMemory:
+            self.memory = moves[2]
 
     # Simulates the life of the cell for a single cycle.
-    def single_cycle(self, foods, deltaTime):
-        self.make_move(foods)
+    def single_cycle(self, foods, preds):
+        self.make_move(foods, preds)
         closets_food = 10000000
         self.age += 1
+        self.energy -= int(self.speed/3)
         # Check to see if the cell is close enough to eat the nearest food.
         for a in foods:
             tmp = sqrt((self.x_pos - a.x_pos) * (self.x_pos - a.x_pos) + (self.y_pos - a.y_pos) * (
@@ -125,8 +140,9 @@ class Cell:
 
     # Combines the cell and another to create a new offspring.
     def mix(self, other):
-        child = Cell()
+        child = Cell(self.isPred)
         child.nn = copy.deepcopy(self.nn)
+        child.color = copy.deepcopy(self.color)
         for a in range(child.nn.inodes):
             for x in range(child.nn.hnodes1):
                 r = random.randint(1, 100)
@@ -159,7 +175,7 @@ class Cell:
                 child.color[k] = other.color[k]
             r = random.randint(1, 100)
             if r == 1:
-                child.color[k] += int(numpy.random.normal(0, 25))
+                child.color[k] += int(numpy.random.normal(0, 40))
             if child.color[k] < 0:
                 child.color[k] = 0
             if child.color[k] > 255:
