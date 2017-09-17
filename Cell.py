@@ -47,7 +47,7 @@ class Cell:
         min_food_distance_right_antena = 10000000
 
         for a in food:
-            distance = (antenna[1][0] - a.x_pos)**2 + (antenna[0][1] - a.y_pos)**2
+            distance = (antenna[1][0] - a.x_pos)**2 + (antenna[1][1] - a.y_pos)**2
             if distance < min_food_distance_right_antena:
                 min_food_distance_right_antena = distance
 
