@@ -33,10 +33,10 @@ class Cell:
     # Gets the inputs for the neural network based on two antenas and its self.
     def get_inputs(self, food, predators):
         # Determin the location of the two antenas.
-        left_antena_x = 15 * cos(self.direction-.3)
-        right_antena_x = 15 * cos(self.direction+.3)
-        left_antena_y = 15 * sin(self.direction-.3)
-        right_antena_y = 15 * sin(self.direction+.3)
+        left_antena_x = -3 * cos(self.direction) - .5 * sin(self.direction)
+        right_antena_x = 3 * cos(self.direction) - .5 * sin(self.direction)
+        left_antena_y = .5 * cos(self.direction) - 3 * sin(self.direction)
+        right_antena_y = .5 * cos(self.direction) + 3 * sin(self.direction)
 
         left_antena_x += self.x_pos
         right_antena_x += self.x_pos
@@ -52,7 +52,7 @@ class Cell:
         min_pred_distance_left_antena = 10000000
         min_pred_distance_right_antena = 10000000
         min_pred_distance_self = 10000000
-        
+
         inputs = []
         for a in food:
             distance =(antenna[0][0] - a.x_pos)**2 + (antenna[0][1] - a.y_pos)**2
@@ -132,7 +132,7 @@ class Cell:
             self.fitness += 1
             foods.remove(closets_food1)
 
-        # Check to see if the cell has enough energy to survive. 
+        # Check to see if the cell has enough energy to survive.
         self.energy -= 1 * int(self.age/400)
         if self.energy < 0:
             self.alive = False
