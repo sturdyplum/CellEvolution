@@ -81,6 +81,9 @@ class Cell:
     def move_forward(self):
         rotated_x = self.speed * cos(self.direction)
         rotated_y = self.speed * sin(self.direction)
+        if self.isPred:
+            rotated_x *= .75
+            rotated_y *= .75
 
         self.x_pos += rotated_x
         self.y_pos += rotated_y
@@ -109,8 +112,6 @@ class Cell:
         if Cell.controlSpeed:
             self.speed = self.logistic(3, .3, 0, moves[outputPtr])+.5
             outputPtr += 1
-        if self.isPred:
-            self.speed *= .75
         self.move_forward()
         if Cell.useMemory:
             self.memory = moves[outputPtr]
