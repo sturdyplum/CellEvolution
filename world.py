@@ -1,5 +1,6 @@
 from Cell import Cell
 from Food import Food
+import scipy.special
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool 
 import matplotlib.pyplot as plt
@@ -179,14 +180,18 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
                         col = "red"
                         if(inputs[0][i] < 0):
                             col = "blue"
-                        value = inputs[0][i] / 1000
-                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*-1, abs(int(value*rad)), fill=col)
+                        value = abs(inputs[0][i] / 1000 * rad)
+                        if numpy.isinf(value) or numpy.isnan(value):
+                            value = rad
+                        else:
+                            value = int(value)
+                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*-1, value, fill=col)
                         
                 for field in fieldNames:
                     arr = getattr(spec.nn, field)
                     inputs = numpy.dot(inputs, arr)
                     if not field == 'weights_hidden2_output':
-                        inputs = spec.nn.activation_function(inputs)
+                        inputs = scipy.special.expit(inputs)
                     else:
                         inputs[0][0] %= math.pi*2
                         inputs[0][0] -= math.pi
@@ -197,7 +202,12 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
                         col = "red"
                         if(inputs[0][i] < 0):
                             col = "blue"
-                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*ptr, abs(int(inputs[0][i]*rad)), fill=col)
+                        value = abs(inputs[0][i]*rad)
+                        if numpy.isinf(value) or numpy.isnan(value):
+                            value = rad
+                        else:
+                            value = int(value)
+                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*ptr, value, fill=col)
                     ptr += 1
             
             canvas2.update()
@@ -207,10 +217,10 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
             pool.map(Runner(food,preds,j),cells)
             pool.close()
             pool.join()
-        if not multi:    
+        if not multi:
             for z in cells:
-               if z.alive:
-                  z.single_cycle(food, preds, j)
+                if z.alive:
+                    z.single_cycle(food, preds, j)
         for z in preds:
             if z.alive:
                 z.single_cycle(cells, food, j)
