@@ -3,7 +3,7 @@ from NeuralNetwork import NeuralNetwork
 import numpy
 import random
 import copy
-
+import time
 
 class Cell:
 
@@ -23,7 +23,7 @@ class Cell:
             outputCount += 1
         if Cell.controlSpeed:
             outputCount += 1
-        self.nn = NeuralNetwork(inputCount, 7, 4, outputCount)
+        self.nn = NeuralNetwork(inputCount, 3, 3, outputCount)
         self.alive = True
         self.fitness = 0
         self.age = 0
@@ -81,8 +81,8 @@ class Cell:
         rotated_x = self.speed * cos(self.direction)
         rotated_y = self.speed * sin(self.direction)
         if self.isPred:
-            rotated_x *= .75
-            rotated_y *= .75
+            rotated_x *= .83
+            rotated_y *= .83
 
         self.x_pos += rotated_x
         self.y_pos += rotated_y
@@ -99,7 +99,8 @@ class Cell:
     def rotate(self, how_much):
         self.direction +=  how_much
         self.direction %= 2*pi
-    def logistic(self, L, k, x0, x):
+    @staticmethod
+    def logistic(L, k, x0, x):
         return L/(1+numpy.exp(-k*(x-x0)))
     # Makes the cells move for a frame.
     def make_move(self, foods, secondaries):
@@ -109,7 +110,7 @@ class Cell:
         self.rotate(moves[outputPtr])
         outputPtr += 1
         if Cell.controlSpeed:
-            self.speed = self.logistic(3, .3, 0, moves[outputPtr])+.5
+            self.speed = Cell.logistic(3, .3, 0, moves[outputPtr])+.5
             outputPtr += 1
         self.move_forward()
         if Cell.useMemory:

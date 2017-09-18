@@ -3,6 +3,8 @@ from Food import Food
 import random
 import time
 import copy
+import numpy
+import math
 
 def randomCell(cells, isPred):
     totalFitness = 0
@@ -39,7 +41,7 @@ def repopulate(cells, number_of_cells, isPred):
             second = randomCell(cells, isPred)
         cells.append(first.mix(second))
 
-def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlider, thresholdSlider, shouldDraw, shouldGradient):
+def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlider, thresholdSlider, shouldDraw, shouldGradient, canvas2):
     Cell.useSecondary = number_of_preds > 0
         
     size_of_world = 900
@@ -51,8 +53,30 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
         food.append(Food())
 
     j = 0
+    bestCellNN = None
+    bestCellFitness = -1
+    bestPredNN = None
+    bestPredFitness = -1
     while j < 100000000:
         j += 1
+        #if j == 40000:
+        #    number_of_preds = 1
+        #    number_of_cells = 1
+        #    cells = []
+        #    preds = []
+        #if j >= 40000:
+        #    if len(cells) == 0:
+        #        temp = Cell(0)
+        #        temp.nn = copy.deepcopy(bestCellNN)
+        #        cells.append(temp)
+        #    if len(preds) == 0:
+        #        temp = Cell(1)
+        #        temp.nn = copy.deepcopy(bestPredNN)
+        #        preds.append(temp)
+        #    preds[0].age = 0
+        #    preds[0].energy = 1000
+        #    cells[0].age = 0
+        #    cells[0].energy = 1000
         while len(food) < number_of_food:
             food.append(Food())
 
@@ -61,8 +85,16 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
         
         totalFitness = 0
         for cell in cells:
+            if cell.fitness > bestCellFitness:
+                bestCellFitness = cell.fitness
+                bestCellNN = cell.nn
             totalFitness += cell.fitness
 
+        for cell in preds:
+            if cell.fitness > bestPredFitness:
+                bestPredFitness = cell.fitness
+                bestPredNN = cell.nn
+            
         spec = Cell(0)
         replaced = False
         for z in cells:
@@ -76,6 +108,7 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
             canvas.update()
         if shouldDraw.get() == 1:
             canvas.delete("all")
+            canvas2.delete("all")
             if shouldGradient.get():
                 bestCopy = Cell(0)
                 bestCopy.nn = copy.deepcopy(spec.nn)
@@ -87,6 +120,7 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
                         for i in range(1,10):
                             tmpX = bestCopy.x_pos
                             tmpY = bestCopy.y_pos
+                            bestCopy.update_closests(food, preds, True)
                             bestCopy.make_move(food, preds)
                             canvas.create_line(tmpX,tmpY,bestCopy.x_pos,bestCopy.y_pos)
             for f in food:
@@ -98,9 +132,53 @@ def runWorld(number_of_cells, number_of_food, number_of_preds, canvas, speedSlid
                     canvas.create_text(c.x_pos-7,c.y_pos-13, text='%de / %df / %.1fs' % (c.energy, c.fitness, c.speed))
             for c in preds:
                 canvas.create_circle(c.x_pos, c.y_pos, 6, fill = 'black')
-
+            
+            if not replaced:
+                replaced = True
+                spec = cells[0]
             if replaced:
                 canvas.create_circle(spec.x_pos, spec.y_pos, 2, fill = "red")
+                fieldNames = ['weights_input_hidden1','weights_hidden1_hidden2', 'weights_hidden2_output']
+                
+                inputs = spec.get_inputs(food, preds)
+                inputs = numpy.transpose(numpy.array(inputs, ndmin=2).T)
+                ptr = 0
+                gapY = 200
+                gapX = 75
+                rad = 25
+                for field in fieldNames:
+                    arr = getattr(spec.nn, field)
+                    for a in range(len(arr)):
+                        for b in range(len(arr[a])):
+                            canvas2.create_line(50+gapX*a+(7-len(arr))*gapX/2, 250+gapY*(ptr-1),50+gapX*b+(7-len(arr[a]))*gapX/2, 250+gapY*ptr, width = Cell.logistic(8, 1, 0, arr[a][b]))
+                    ptr += 1
+                ptr = 0
+                for i in range(len(inputs[0])):
+                        col = "red"
+                        if(inputs[0][i] < 0):
+                            col = "blue"
+                        value = inputs[0][i] / 1000
+                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*-1, abs(int(value*rad)), fill=col)
+                        
+                for field in fieldNames:
+                    arr = getattr(spec.nn, field)
+                    inputs = numpy.dot(inputs, arr)
+                    if not field == 'weights_hidden2_output':
+                        inputs = spec.nn.activation_function(inputs)
+                    else:
+                        inputs[0][0] %= math.pi*2
+                        inputs[0][0] -= math.pi
+                        inputs[0][0] /= math.pi
+                        if len(inputs[0]) >= 2:
+                            inputs[0][1] = Cell.logistic(1, .3, 0, inputs[0][1])
+                    for i in range(len(inputs[0])):
+                        col = "red"
+                        if(inputs[0][i] < 0):
+                            col = "blue"
+                        canvas2.create_circle(50+gapX*i+(7-len(inputs[0]))*gapX/2, 250+gapY*ptr, abs(int(inputs[0][i]*rad)), fill=col)
+                    ptr += 1
+            
+            canvas2.update()
             canvas.update()
         for z in cells:
             if z.alive:
